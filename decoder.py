@@ -19,11 +19,12 @@ class DecoderBlock(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, z_size, size):
+    def __init__(self, z_size, size, num_classes=10):
         super(Decoder, self).__init__()
 
         # start from B * z_size
-        self.fc = nn.Sequential(nn.Linear(in_features=z_size, out_features=8 * 8 * size, bias=False),
+        # concatenate one hot encoded class vector
+        self.fc = nn.Sequential(nn.Linear(in_features=(z_size + num_classes), out_features=(8 * 8 * size), bias=False),
                                 nn.BatchNorm1d(num_features=8 * 8 * size, momentum=0.9),
                                 nn.ReLU(True))
         self.size = size
@@ -44,8 +45,9 @@ class Decoder(nn.Module):
         ))
         self.conv = nn.Sequential(*layers)
 
-    def forward(self, ten):
-        ten = self.fc(ten)
+    def forward(self, ten, one_hot_classes):
+        ten_cat = torch.cat((one_hot_classes, ten), 1)
+        ten = self.fc(ten_cat)
         ten = ten.view(len(ten), -1, 8, 8)
         ten = self.conv(ten)
         return ten
