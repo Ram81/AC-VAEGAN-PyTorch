@@ -9,18 +9,18 @@ from torch.autograd import Variable
 
 
 class VAEGAN(nn.Module):
-    def __init__(self, z_size=128, recon_level=3):
+    def __init__(self, z_size=128, recon_level=3, num_classes=10):
         super(VAEGAN, self).__init__()
 
         # latent space size
         self.z_size = z_size
         self.encoder = Encoder(z_size=self.z_size)
-        self.decoder = Decoder(z_size=self.z_size, size=self.encoder.size)
+        self.decoder = Decoder(z_size=self.z_size, size=self.encoder.size,
+                               num_classes=num_classes)
 
         self.discriminator = Discriminator(channels_in=3, recon_level=recon_level)
 
         # initialize self defined params
-        training = True
         self.init_parameters()
 
     def init_parameters(self):
@@ -37,11 +37,10 @@ class VAEGAN(nn.Module):
                 if hasattr(m, 'bias') and m.bias is not None and m.bias.requires_grad:
                     nn.init.constant(m.bias, 0.0)
 
-    def forward(self, ten, gen_size=10):
+    def forward(self, ten, one_hot_class, gen_size=10):
         if self.training:
             # save original images
             ten_original = ten
-
             # encode
             mu, log_variances = self.encoder(ten)
 
@@ -55,7 +54,7 @@ class VAEGAN(nn.Module):
             ten = ten_from_normal * variances + mu
 
             # decode tensor
-            ten = self.decoder(ten)
+            ten = self.decoder(ten, one_hot_class)
 
             # discriminator for reconstruction
             ten_layer = self.discriminator(ten, ten_original, mode='REC')
@@ -63,7 +62,7 @@ class VAEGAN(nn.Module):
             # decode from samples
             ten_from_normal = Variable(torch.randn(len(ten), self.z_size).cuda(), requires_grad=True)
 
-            ten = self.decoder(ten_from_normal)
+            ten = self.decoder(ten_from_normal, one_hot_class)
             ten_real_fake, ten_aux = self.discriminator(ten_original, ten, mode='GAN')
 
             return ten, ten_real_fake, ten_layer, mu, log_variances, ten_aux
@@ -83,7 +82,7 @@ class VAEGAN(nn.Module):
                 ten = ten_from_normal * variances + mu
 
             # decode tensor
-            ten = self.decoder(ten)
+            ten = self.decoder(ten, one_hot_class)
             return ten
 
     def __call__(self, *args, **kwargs):
@@ -103,6 +102,7 @@ class VAEGAN(nn.Module):
         :param variances: tensor of diagonals of log_variances
         :param aux_labels_original: tensor of diagonals of log_variances
         :param aux_labels_predicted: tensor of diagonals of log_variances
+        :param aux_labels_sampled: tensor of diagonals of log_variances
         :return:
         """
 
@@ -141,5 +141,4 @@ class VAEGAN(nn.Module):
                                        Variable(torch.zeros_like(labels_sampled.data).cuda(), requires_grad=False))
         '''
 
-        return nle, kl, mse, bce_dis_original, bce_dis_sampled, bce_gen_original, bce_gen_sampled,\
-            nllloss_aux_original, nllloss_aux_sampled
+        return nle, kl, mse, bce_dis_original, bce_dis_sampled, bce_gen_original, bce_gen_sampled, nllloss_aux_original, nllloss_aux_sampled

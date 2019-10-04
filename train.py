@@ -1,6 +1,7 @@
 import argparse
 import numpy as np
 import torch
+import torch.nn.functional as F
 import torchvision.datasets as dset
 import torchvision.transforms as transforms
 
@@ -152,31 +153,32 @@ if __name__ == "__main__":
             data_target = Variable(target_batch, requires_grad=False).float().cuda()
             data_in = Variable(data_batch, requires_grad=False).float().cuda()
             aux_label_batch = Variable(target_batch, requires_grad=False).long().cuda()
+            one_hot_class = F.one_hot(aux_label_batch).float()
 
             # get output
-            out, out_labels, out_layer, mus, variances, aux_labels = net(data_in)
+            out, out_labels, out_layer, mus, variances, aux_labels = net(data_in, one_hot_class)
             # split so we can get the different parts
             out_layer_predicted = out_layer[:len(out_layer) // 2]
             out_layer_original = out_layer[len(out_layer) // 2:]
-            # TODO set a batch_len variable to get a clean code here
+            # TODO set a batch_size variable to get a clean code here
             out_labels_original = out_labels[:len(out_labels) // 2]
             out_labels_sampled = out_labels[-len(out_labels) // 2:]
 
             # aux labels for original and actual images
-            aux_labels_original = aux_labels[:len(aux_labels) // 2]
-            aux_labels_sampled = aux_labels[-len(aux_labels) // 2:]
+            aux_labels_sampled = aux_labels[:len(aux_labels) // 2]
+            aux_labels_original = aux_labels[-len(aux_labels) // 2:]
 
             # loss, nothing special here
-            nle_value, kl_value, mse_value, bce_dis_original_value, bce_dis_sampled_value, \
-            bce_gen_original_value, bce_gen_sampled_value, \
-            nllloss_aux_original, nllloss_aux_sampled = VAEGAN.loss(data_target, out,
-                                                                    out_layer_original,
-                                                                    out_layer_predicted,
-                                                                    out_labels_original,
-                                                                    out_labels_sampled,
-                                                                    mus, variances,
-                                                                    aux_labels_original, aux_labels_sampled,
-                                                                    aux_label_batch)
+            nle_value, kl_value, mse_value, bce_dis_original_value, bce_dis_sampled_value,\
+                bce_gen_original_value, bce_gen_sampled_value, \
+                nllloss_aux_original, nllloss_aux_sampled = VAEGAN.loss(data_target, out,
+                                                                        out_layer_original,
+                                                                        out_layer_predicted,
+                                                                        out_labels_original,
+                                                                        out_labels_sampled,
+                                                                        mus, variances,
+                                                                        aux_labels_original, aux_labels_sampled,
+                                                                        aux_label_batch)
             # THIS IS THE MOST IMPORTANT PART OF THE CODE
             loss_encoder = torch.sum(kl_value) + torch.sum(mse_value)
             loss_discriminator = torch.sum(bce_dis_original_value) + torch.sum(bce_dis_sampled_value) \
