@@ -24,6 +24,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="VAEGAN")
     parser.add_argument("--train_folder", action="store", dest="train_folder")
     parser.add_argument("--test_folder", action="store", dest="test_folder")
+    parser.add_argument("--model_path", action="store", dest="model_path")
     parser.add_argument("--n_epochs", default=12, action="store", type=int, dest="n_epochs")
     parser.add_argument("--z_size", default=128, action="store", type=int, dest="z_size")
     parser.add_argument("--recon_level", default=3, action="store", type=int, dest="recon_level")
@@ -51,6 +52,7 @@ if __name__ == "__main__":
     decay_equilibrium = args.decay_equilibrium
     slurm = args.slurm
     batchsize = args.batchsize
+    model_path = args.model_path
 
     # TODO: add to argument parser
     dataset_name = 'cifar10'
@@ -294,4 +296,5 @@ if __name__ == "__main__":
         writer.add_scalar('gan_dis', gan_dis_eq_mean.measure, step_index)
         step_index += 1
 
+    torch.save(net, model_path)
     exit(0)
