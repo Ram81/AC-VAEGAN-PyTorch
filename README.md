@@ -1,5 +1,5 @@
 # ACVAEGAN
-A novel approach of imposing a condition on VAEGAN through the use of an auxiliary classifier.
+An approach of imposing a condition on VAEGAN through the use of an auxiliary classifier.
 
 ## Description
 - Goal: To build a Conditional VAEGAN by employing an Auxiliary Classifier.
